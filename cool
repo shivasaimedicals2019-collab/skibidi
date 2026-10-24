@@ -1,0 +1,108 @@
+-- Smooth Fluent UI with Fixed Gojo Background Rendering
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Zombie Rush | Gojo Edition",
+    SubTitle = "Smooth Custom Interface",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+--------------------------------------------------------------------------------
+-- RELIABLE GOJO BACKGROUND SETUP
+--------------------------------------------------------------------------------
+-- Using a confirmed public Gojo image asset ID
+local GOJO_ASSET_ID = "rbxassetid://11417088924"
+
+task.spawn(function()
+    task.wait(0.5) -- Short delay to ensure Fluent fully constructs the UI hierarchy
+
+    local CoreGui = game:GetService("CoreGui")
+    local FluentGui = CoreGui:FindFirstChild("Fluent") or CoreGui:FindFirstChildWhichIsA("ScreenGui")
+    
+    if FluentGui then
+        local MainFrame = FluentGui:FindFirstChild("Main") or FluentGui:FindFirstChild("Frame", true)
+        
+        if MainFrame then
+            -- Make Fluent's default solid background semi-transparent so the picture is visible
+            MainFrame.BackgroundTransparency = 0.3
+            for _, child in ipairs(MainFrame:GetChildren()) do
+                if child:IsA("Frame") and child.Name ~= "GojoBackgroundSmooth" then
+                    child.BackgroundTransparency = math.max(child.BackgroundTransparency, 0.25)
+                end
+            end
+
+            -- Check if background already exists to avoid duplication
+            local ExistingBg = MainFrame:FindFirstChild("GojoBackgroundSmooth")
+            if ExistingBg then ExistingBg:Destroy() end
+
+            -- Create the ImageLabel
+            local BackgroundImage = Instance.new("ImageLabel")
+            BackgroundImage.Name = "GojoBackgroundSmooth"
+            BackgroundImage.Size = UDim2.fromScale(1, 1)
+            BackgroundImage.Position = UDim2.fromScale(0, 0)
+            BackgroundImage.Image = GOJO_ASSET_ID
+            BackgroundImage.ImageTransparency = 1 -- Start transparent for fade-in
+            BackgroundImage.ScaleType = Enum.ScaleType.Crop
+            BackgroundImage.BackgroundTransparency = 1
+            BackgroundImage.ZIndex = -1 -- Render strictly behind UI controls
+            
+            -- Match Fluent UI rounded corners
+            local Corner = Instance.new("UICorner")
+            Corner.CornerRadius = UDim.new(0, 8)
+            Corner.Parent = BackgroundImage
+            
+            BackgroundImage.Parent = MainFrame
+
+            -- Smooth Fade-In Animation
+            TweenService:Create(
+                BackgroundImage,
+                TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                { ImageTransparency = 0.35 }
+            ):Play()
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- TABS & CONTROLS
+--------------------------------------------------------------------------------
+local Tabs = {
+    Main = Window:AddTab({ Title = "General", Icon = "home" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+Tabs.Main:AddSection("Dashboard Tools")
+
+Tabs.Main:AddToggle("DisplayToggle", {
+    Title = "Enable Helper Display",
+    Default = false,
+    Callback = function(Value)
+        print("Toggle set to:", Value)
+    end
+})
+
+local currentCamera = Workspace.CurrentCamera
+
+Tabs.Main:AddSlider("FOVSlider", {
+    Title = "Camera FOV",
+    Default = currentCamera.FieldOfView,
+    Min = 50,
+    Max = 120,
+    Rounding = 0,
+    Callback = function(Value)
+        TweenService:Create(
+            currentCamera,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            { FieldOfView = Value }
+        ):Play()
+    end
+})
+
+Window:SelectTab(1)
